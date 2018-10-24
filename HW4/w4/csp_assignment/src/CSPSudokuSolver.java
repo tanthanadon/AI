@@ -29,14 +29,46 @@ public class CSPSudokuSolver {
 
     public static SudokuVar getUnassignedVar(SudokuNode node) {
         int n = node.getState().getBoard().length;
+        ArrayList<HashSet<Short>> array = node.getAllGoodValues();
+        int min = node.getGoodValues(0, 0).size();
+        int temp;
+        int row, col;
+
+        ArrayList<SudokuVar> var;
         if (MRV) {
             // [start:1]
-            throw new UnsupportedOperationException("MRV has not been implemented.");
+            // Like a boss
+            row = -1;
+            col = -1;
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < n; j++) {
+                    if (node.getState().getBoard()[i][j] == 0){
+                        temp = node.getGoodValues(i, j).size();
+                        if(temp < min){
+                            min = temp;
+                            row = i;
+                            col = j;
+                            //System.out.println(node.getGoodValues(row, col));
+                            //System.out.println(row+", "+col);
+                        }
+
+                        if(row == -1 && col == -1){
+                            row = i;
+                            col = j;
+                            //System.out.println(node.getGoodValues(row, col));
+                            //System.out.println("Out: "+row+", "+col);
+                        }
+                    }
+                }
+            }
+            return new SudokuVar(row, col);
+            //throw new UnsupportedOperationException("MRV has not been implemented.");
             // [end:1]
         } else {
             // return first unassigned variable
             for (int i = 0; i < n; i++) {
                 for (int j = 0; j < n; j++) {
+                    // Like a newbie
                     if (node.getState().getBoard()[i][j] == 0){
                         return new SudokuVar(i, j);
                     }
@@ -86,6 +118,16 @@ public class CSPSudokuSolver {
         // enforce arc consistency, return true if modified available values of the tail
         boolean modified = false;
         // [start:2]
+        if(node.getGoodValues(head.R(), head.C()).size()==1){
+            for (Short var : node.getGoodValues(head.R(), head.C())) {
+                if(node.getGoodValues(tail.R(), tail.C()).remove(var)){
+                    //System.out.println(var);
+                    //node.getGoodValues(tail.R(), tail.C()).remove(var);
+                    modified = true;
+                }
+                
+            }
+        }
         // [end:2]
         return modified;
     }
@@ -94,7 +136,21 @@ public class CSPSudokuSolver {
         int n = node.getState().getBoard().length;
         // forward checking enforce immediate arcs and returns true if it is still solvable
         // [start:3]
-        throw new UnsupportedOperationException("Forward Checking has not been implemented.");
+        SudokuVar head;
+        HashSet<SudokuVar> neighbors = getConnectedOpenVariables(node, var, n);
+        head = var;
+        // System.out.println("Head: " + var.R() + ", " + var.C() +" = "+head);
+        for(SudokuVar neighbor: neighbors){
+            // tail = node.getGoodValues(s.R(), s.C());
+            // System.out.println("Taile: " + s.R()+", "+s.C()+" = "+node.getGoodValues(s.R(), s.C()));
+            if(enforceAC(node, head, neighbor)){
+                if(node.getGoodValues(neighbor.R(), neighbor.C()).size() == 0) return false;
+                //System.out.println(node.getAllGoodValues().toString());
+            }
+        }
+
+        return true;
+        //throw new UnsupportedOperationException("Forward Checking has not been implemented.");
         // [end:3]
     }
 
@@ -103,7 +159,29 @@ public class CSPSudokuSolver {
         int n = node.getState().getBoard().length;
         // MAC enforces arcs and returns true if it is still solvable
         // [start:4]
-        throw new UnsupportedOperationException("MAC has not been implemented.");
+        HashSet<SudokuVar> neighbors = getConnectedOpenVariables(node, var, n); 
+        for(SudokuVar i: neighbors){
+            arcs.add(new Arc(var, i));
+        }
+        Arc arc;
+        while(!arcs.isEmpty()){
+            arc = arcs.remove();
+            // System.out.println("Head: " + var.R() + ", " + var.C() +" = "+head);
+            // tail = node.getGoodValues(s.R(), s.C());
+            // System.out.println("Taile: " + s.R()+", "+s.C()+" = "+node.getGoodValues(s.R(), s.C()));
+            if(enforceAC(node, arc.getHead(), arc.getTail())){
+                if(node.getGoodValues(arc.getTail().R(), arc.getTail().C()).size() == 0) return false;
+                neighbors = getConnectedOpenVariables(node, arc.getTail(), n);
+                for(SudokuVar xk: neighbors){
+                    arcs.add(new Arc(arc.getTail(), xk));
+                    //arcs.add(new Arc(xk, arc.getTail()));
+                }
+                //System.out.println(node.getAllGoodValues().toString());
+            }
+        }
+        
+        return true;
+        // throw new UnsupportedOperationException("MAC has not been implemented.");
         // [end:4]
     }
 
@@ -117,7 +195,7 @@ public class CSPSudokuSolver {
             return forwardCheck(node, var);
         }
     }
-
+    // Done
     public static SudokuNode backtrackSearch(SudokuNode node, int depth){
         // backtrack search
         // return null if not current node is not solvable
@@ -127,11 +205,42 @@ public class CSPSudokuSolver {
         // - node.getState().isSolved(): return true if valid assignment
         // - node.copy(): return a new node.
         //                It is important to copy a node before you assign or recurse
-        // - node.assign(row, col, value): assign value to a position. This also sets
+        // - node.assign(row, col, value): assign value to short) Random.nextInt(Short.MAX_VALUE + 1);a position. This also sets
         //                                 the possible values of the position to be the value.
         // - if (depth > LIMIT) {return null;}: useful to stop early
         // [start:0]
+        countBacktracking += 1;    
+        // Check wether all variables are assigned
+        if(depth > LIMIT) return null;
+        if(node.getState().isSolved()) return node;
+        if(node.getState().isFilled()) return null;
+        // Check wether all variables do not have duplicated number in row, column, and square
+       
+        // Find the location in the board that has zero
+        // Use MRV to find the fewest legal value or find out the first value in state that is zero
+        SudokuVar var = getUnassignedVar(node);
+        SudokuNode assignment;
+        SudokuNode result;
+        //System.out.println(getDomainValues(node, var));
+        for(Short value: getDomainValues(node, var)){
+            // Check whether the node has this value as a candidate
+            // If true find the solution
+            // Add var = value to assignment
+            assignment = node.copy();
+            assignment.assign(var.R(), var.C(), value);
+            // System.out.println(assignment.getState());
+            // System.out.println();
+            // Use MAC or forward check to find out reason
+            if(inference(assignment, var)){
+                result = backtrackSearch(assignment, depth+1);
+                if(result != null){
+                    return result;
+                }
+            }
 
+            assignment.getState().unassign(var.R(), var.C());
+
+        }
 
         // [end:0]
 
@@ -162,7 +271,7 @@ public class CSPSudokuSolver {
             while ((line=reader.readLine()) != null) {
                 boards.add(line);
             }
-            for (int i = 0; i < 200; i++){
+            for (int i = 0; i < 50; i++){
                 int index = random.nextInt(boards.size());
                 String board = boards.get(index);
                 Date startTime = new Date();
@@ -185,15 +294,16 @@ public class CSPSudokuSolver {
     }
 
     public static int LIMIT = 9*9+1;  // helpful for debugging
-    public static boolean MAC = false;
+    public static boolean MAC = true;
     public static boolean MRV = false;
-    public static boolean INFER = false;
-    public static boolean LCV = false;  // not required
+    public static boolean INFER = true;
+    public static boolean LCV = false;  // not requiredtrue
+    public static int countBacktracking = 0;
 
     public static void main(String[] args) {
-        long studentId = 42;
-        String testBoard = "0200000203404000";
-        // String testBoard = "000020040008035000000070602031046970200000000000501203049000730000000010800004000";
+        long studentId = 5988073;
+        //String testBoard = "0200000203404000";
+        String testBoard = "000020040008035000000070602031046970200000000000501203049000730000000010800004000";
         Date startTime = new Date();
         SudokuState solved = solve(testBoard);
         Date endTime = new Date();
@@ -201,7 +311,8 @@ public class CSPSudokuSolver {
             System.out.println(solved);
             System.out.println("Solved in " + (endTime.getTime() - startTime.getTime()) + "ms");
         }
-        // experiment(studentId);
+        System.out.println(countBacktracking);
+        //experiment(studentId);
     }
 
 }
