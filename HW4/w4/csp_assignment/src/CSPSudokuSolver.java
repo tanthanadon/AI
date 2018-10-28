@@ -1,5 +1,8 @@
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -29,38 +32,29 @@ public class CSPSudokuSolver {
 
     public static SudokuVar getUnassignedVar(SudokuNode node) {
         int n = node.getState().getBoard().length;
-        ArrayList<HashSet<Short>> array = node.getAllGoodValues();
-        int min = node.getGoodValues(0, 0).size();
+        //int min = node.getGoodValues(0, 0).size();
+        int min = n;
         int temp;
         int row, col;
-
-        ArrayList<SudokuVar> var;
         if (MRV) {
-            // [start:1]
-            // Like a boss
-            row = -1;
-            col = -1;
+            //[start:1]
+            //Like a boss
+            row = 0;
+            col = 0;
             for (int i = 0; i < n; i++) {
                 for (int j = 0; j < n; j++) {
+                    temp = node.getGoodValues(i, j).size();
                     if (node.getState().getBoard()[i][j] == 0){
-                        temp = node.getGoodValues(i, j).size();
-                        if(temp < min){
+                        if(temp < min && temp != 0){
                             min = temp;
                             row = i;
                             col = j;
-                            //System.out.println(node.getGoodValues(row, col));
-                            //System.out.println(row+", "+col);
                         }
 
-                        if(row == -1 && col == -1){
-                            row = i;
-                            col = j;
-                            //System.out.println(node.getGoodValues(row, col));
-                            //System.out.println("Out: "+row+", "+col);
-                        }
                     }
                 }
             }
+            
             return new SudokuVar(row, col);
             //throw new UnsupportedOperationException("MRV has not been implemented.");
             // [end:1]
@@ -99,7 +93,6 @@ public class CSPSudokuSolver {
             if (board[var.R()][i] == 0){
                 vars.add(new SudokuVar(var.R(), i));
             }
-            vars.add(new SudokuVar(var.R(), i));
         }
         int boxRow = var.R() - var.R()%m;
         int boxCol = var.C() - var.C()%m;
@@ -209,11 +202,12 @@ public class CSPSudokuSolver {
         //                                 the possible values of the position to be the value.
         // - if (depth > LIMIT) {return null;}: useful to stop early
         // [start:0]
-        countBacktracking += 1;    
+       //countBacktracking += 1;    
         // Check wether all variables are assigned
         if(depth > LIMIT) return null;
         if(node.getState().isSolved()) return node;
         if(node.getState().isFilled()) return null;
+        
         // Check wether all variables do not have duplicated number in row, column, and square
        
         // Find the location in the board that has zero
@@ -236,10 +230,10 @@ public class CSPSudokuSolver {
                 if(result != null){
                     return result;
                 }
+                
             }
 
             assignment.getState().unassign(var.R(), var.C());
-
         }
 
         // [end:0]
@@ -265,6 +259,8 @@ public class CSPSudokuSolver {
         int count = 0;
         BufferedReader reader;
         ArrayList<String> boards = new ArrayList<>();
+       
+        
         try {
             reader = new BufferedReader(new FileReader("sudoku9.txt"));
             String line;
@@ -274,6 +270,7 @@ public class CSPSudokuSolver {
             for (int i = 0; i < 50; i++){
                 int index = random.nextInt(boards.size());
                 String board = boards.get(index);
+                System.out.println(board.hashCode());
                 Date startTime = new Date();
                 SudokuState solved = solve(board);
                 Date endTime = new Date();
@@ -286,7 +283,7 @@ public class CSPSudokuSolver {
                 }
             }
             System.out.println(
-                "max: " + max + "ms, min: " + min + "ms avg: " + ((double)sum/(double)count));
+                "max: " + max + "ms, min: " + min + "ms, avg: " + ((double)sum/(double)count));
         } catch (IOException e) {
             e.printStackTrace();
 		}
@@ -294,25 +291,25 @@ public class CSPSudokuSolver {
     }
 
     public static int LIMIT = 9*9+1;  // helpful for debugging
-    public static boolean MAC = true;
+    public static boolean MAC = false;
     public static boolean MRV = false;
     public static boolean INFER = true;
     public static boolean LCV = false;  // not requiredtrue
-    public static int countBacktracking = 0;
+    //public static int countBacktracking = 0;
 
     public static void main(String[] args) {
         long studentId = 5988073;
         //String testBoard = "0200000203404000";
-        String testBoard = "000020040008035000000070602031046970200000000000501203049000730000000010800004000";
-        Date startTime = new Date();
-        SudokuState solved = solve(testBoard);
-        Date endTime = new Date();
-        if (solved != null) {
-            System.out.println(solved);
-            System.out.println("Solved in " + (endTime.getTime() - startTime.getTime()) + "ms");
-        }
-        System.out.println(countBacktracking);
-        //experiment(studentId);
+        // String testBoard = "000020040008035000000070602031046970200000000000501203049000730000000010800004000";
+        // Date startTime = new Date();
+        // SudokuState solved = solve(testBoard);
+        // Date endTime = new Date();
+        // if (solved != null) {
+        //     System.out.println(solved);
+        //     System.out.println("Solved in " + (endTime.getTime() - startTime.getTime()) + "ms");
+        // }
+        //System.out.println(countBacktracking);
+        experiment(studentId);
     }
 
 }
